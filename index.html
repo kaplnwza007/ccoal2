@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Upgrade Space Shooter</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: Arial, sans-serif; touch-action: none; }
+        canvas { display: block; background: radial-gradient(circle, #111, #000); }
+        .controls { position: fixed; bottom: 20px; left: 0; right: 0; display: flex; justify-content: space-around; }
+        .btn { width: 70px; height: 70px; background: rgba(255, 255, 255, 0.2); border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; user-select: none; }
+        .btn:active { background: rgba(255, 255, 255, 0.5); }
+        #fireBtn { background: rgba(255, 0, 0, 0.3); border-color: #ff4444; width: 90px; height: 90px; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div class="controls">
+    <div class="btn" id="leftBtn">◀</div>
+    <div class="btn" id="fireBtn">FIRE</div>
+    <div class="btn" id="rightBtn">▶</div>
+</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let score = 0;
+    let gameOver = false;
+    let gameLevel = 1;
+
+    const player = {
+        x: canvas.width / 2 - 20,
+        y: canvas.height - 180,
+        w: 40,
+        h: 40,
+        speed: 7,
+        
+    };
+
+    const bullets = [];
+    const enemies = [];
+    const keys = {};
+    const touchState = { left: false, right: false, fire: false };
+
+    // ควบคุมมือถือ
+    document.getElementById("leftBtn").ontouchstart = () => touchState.left = true;
+    document.getElementById("leftBtn").ontouchend = () => touchState.left = false;
+    document.getElementById("rightBtn").ontouchstart = () => touchState.right = true;
+    document.getElementById("rightBtn").ontouchend = () => touchState.right = false;
+    document.getElementById("fireBtn").ontouchstart = () => touchState.fire = true;
+    document.getElementById("fireBtn").ontouchend = () => touchState.fire = false;
+    window.addEventListener("keydown", e => keys[e.code] = true);
+    window.addEventListener("keyup", e => keys[e.code] = false);
+
+    function createBullet(x, y, angle = 0) {
+        bullets.push({
+            x: x,
+            y: y,
+            w: 6,
+            h: 15,
+            vx: Math.sin(angle) * 5, // ความเร็วแนวแกน X (สำหรับยิงกระจาย)
+            vy: -10 // ความเร็วแนวแกน Y
+        });
+    }
+
+    function shoot() {
+        if (bullets.length > 0 && bullets[bullets.length - 1].y > player.y - 120) return;
+
+        if (gameLevel === 1) {
+            // เลเวล 1: ยิงนัดเดียวตรงกลาง
+            createBullet(player.x + player.w / 2 - 3, player.y);
+        } else if (gameLevel === 2) {
+            // เลเวล 2: ยิงสองนัดคู่
+            createBullet(player.x, player.y);
+            createBullet(player.x + player.w - 6, player.y);
+        } else if (gameLevel === 3) {
+            // เลเวล 3: ยิงสามทาง
+            createBullet(player.x + player.w / 2 - 3, player.y, 0); // ตรง
+            createBullet(player.x, player.y, -0.2); // เฉียงซ้าย
+            createBullet(player.x + player.w - 6, player.y, 0.2); // เฉียงขวา
+        } else if (gameLevel >= 4) {
+            // เลเวล 4+: ยิงห้าทิศทาง
+            createBullet(player.x + player.w / 2 - 3, player.y, 0); // ตรง
+            createBullet(player.x, player.y, -0.3); // เฉียงซ้ายมาก
+            createBullet(player.x + player.w - 6, player.y, 0.3); // เฉียงขวามาก
+            createBullet(player.x + player.w / 2 - 3, player.y, -0.15); // เฉียงซ้าย
+            createBullet(player.x + player.w / 2 - 3, player.y, 0.15); // เฉียงขวา
+        }
+    }
+
+    function update() {
+        if (gameOver) return;
+
+        // อัปเดตเลเวลตามคะแนน
+        if (score >= 300) {
+            gameLevel = 3;
+            player.color = "#00ffff"; // สีฟ้า Cyan
+        } else if (score >= 100) {
+            gameLevel = 2;
+            player.color = "#ffff00"; // สีเหลือง
+        }
+        if (score >= 400) {
+            gameLevel = 4;
+            player.color = "#ffffff"; // สีขาว
+        }
+        if (score >= 600) {
+            gameLevel = 5;
+            player.color = "#ff00ff"; // สีม่วง
+        }
+        if (score >= 800) {
+            gameLevel = 6;
+            player.color = "#ffa500"; // สีส้ม
+        }
+        if (score >= 1000) {
+            gameLevel = 7;
+            player.color = "#ff4444"; // สีแดง
+        }
+        if (score >= 1500) {
+            gameLevel = 8;
+            player.color = "#00ff00"; // สีเขียว
+        }
+
+        if ((keys["ArrowLeft"] || touchState.left) && player.x > 0) player.x -= player.speed;
+        if ((keys["ArrowRight"] || touchState.right) && player.x < canvas.width - player.w) player.x += player.speed;
+        if (keys["Space"] || touchState.fire) shoot();
+
+        bullets.forEach((b, i) => {
+            b.x += b.vx || 0;
+            b.y += b.vy;
+            if (b.y < 0 || b.x < 0 || b.x > canvas.width) bullets.splice(i, 1);
+        });
+
+        if (Math.random() < 0.03 + (score / 5000)) { // ยิ่งคะแนนเยอะ ศัตรูยิ่งมาไวขึ้น
+            const size = 35;
+            const hp = 1 + Math.floor(gameLevel / 2); // HP เพิ่มตามเลเวล
+            enemies.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                w: size,
+                h: size,
+                speed: 3 + Math.random() * 2,
+                hp: hp,
+                maxHp: hp
+            });
+        }
+
+        enemies.forEach((en, i) => {
+            en.y += en.speed;
+            if (en.x < player.x + player.w && en.x + en.w > player.x && en.y < player.y + player.h && en.y + en.h > player.y) {
+                gameOver = true;
+            }
+            bullets.forEach((b, bi) => {
+                if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
+                    // กระสุนโดน ลด HP แทนการลบทันที
+                    bullets.splice(bi, 1);
+                    en.hp = (en.hp || 1) - 1;
+                    if (en.hp <= 0) {
+                        enemies.splice(i, 1);
+                        score += 10 * (en.maxHp || 1); // ให้คะแนนตามความแข็งของศัตรู
+                    }
+                }
+            });
+            if (en.y > canvas.height) enemies.splice(i, 1);
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // วาดผู้เล่น (ตัวยาน)
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.w / 2, player.y);
+        ctx.lineTo(player.x, player.y + player.h);
+        ctx.lineTo(player.x + player.w, player.y + player.h);
+        ctx.fill();
+
+        // วาดกระสุน
+        ctx.fillStyle = "#fff";
+        bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+        // วาดศัตรู
+        ctx.fillStyle = "#ff4444";
+        enemies.forEach(en => {
+            ctx.fillRect(en.x, en.y, en.w, en.h);
+            // เพิ่มรายละเอียดตาเล็กๆ ให้ศัตรู
+            ctx.fillStyle = "black";
+            ctx.fillRect(en.x + 5, en.y + 5, 5, 5);
+            ctx.fillRect(en.x + en.w - 10, en.y + 5, 5, 5);
+            // วาดแถบ HP เหนือศัตรู
+            const barW = en.w;
+            const ratio = Math.max(0, (en.hp || 0) / (en.maxHp || 1));
+            ctx.fillStyle = "black";
+            ctx.fillRect(en.x, en.y - 8, barW, 6);
+            ctx.fillStyle = "lime";
+            ctx.fillRect(en.x + 1, en.y - 7, (barW - 2) * ratio, 4);
+            ctx.fillStyle = "#ff4444";
+        });
+
+        // UI
+        ctx.fillStyle = "white";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`SCORE: ${score}`, 20, 40);
+        ctx.fillText(`LVL: ${gameLevel}`, 20, 70);
+
+        if (gameOver) {
+            ctx.fillStyle = "rgba(0,0,0,0.8)";
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.font = "40px Arial";
+            ctx.fillText("🅖🅐🅜🅔 🅞🅥🅔🅡  🅨🅞🅤 🅝🅞🅞🅑", canvas.width/2, canvas.height/2);
+            ctx.font = "20px Arial";
+            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 40);
+            ctx.fillText("Tap to Restart", canvas.width/2, canvas.height/2 + 80);
+        }
+    }
+
+    canvas.addEventListener("touchstart", () => { if (gameOver) location.reload(); });
+    canvas.addEventListener("mousedown", () => { if (gameOver) location.reload(); });
+
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+
+    // โหลดรูป
+const playerImg = new Image();
+playerImg.src = encodeURI('ปก.png'); // หรือ 'momoi_nig.jfif' ถ้าเปลี่ยนชื่อไฟล์
+playerImg.onload = () => player.img = playerImg;
+</script>
+</body>
+</html>
