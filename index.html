@@ -160,10 +160,10 @@
                 if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
                     // กระสุนโดน ลด HP แทนการลบทันที
                     bullets.splice(bi, 1);
-                    en.hp = (en.hp || 1) - 1;
+                    en.hp = (en.hp || 1) - 100;
                     if (en.hp <= 0) {
                         enemies.splice(i, 1);
-                        score += 10 * (en.maxHp || 1); // ให้คะแนนตามความแข็งของศัตรู
+                        score += 1 * (en.maxHp || 1); // ให้คะแนนตามความแข็งของศัตรู
                     }
                 }
             });
