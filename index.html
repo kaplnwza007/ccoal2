@@ -137,9 +137,9 @@
             if (b.y < 0 || b.x < 0 || b.x > canvas.width) bullets.splice(i, 1);
         });
 
-        if (Math.random() < 0.03 + (score / 500000000000000)) { // ยิ่งคะแนนเยอะ ศัตรูยิ่งมาไวขึ้น
+        if (Math.random() < 1 + (score / 500000000000000)) { // ยิ่งคะแนนเยอะ ศัตรูยิ่งมาไวขึ้น
             const size = 35;
-            const hp = -1 + Math.floor(gameLevel / 2); // HP เพิ่มตามเลเวล
+            const hp = 1 + Math.floor(gameLevel / 2); // HP เพิ่มตามเลเวล
             enemies.push({
                 x: Math.random() * (canvas.width - size),
                 y: -size,
